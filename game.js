@@ -47,7 +47,7 @@ for (let i = 0; i < 5; i++) {
   buildings.push({ x: i * 300, h: 100 + Math.random() * 100 });
 }
 
-// ===== 入力 =====
+// ===== 入力（PC） =====
 document.addEventListener("keydown", (e) => {
   if (e.code === "Space") {
     if (!player.jumping) {
@@ -65,6 +65,32 @@ document.addEventListener("keyup", (e) => {
   if (e.code === "Space") floating = false;
   if (e.code === "KeyZ") sucking = false;
   if (e.code === "KeyX") shooting = false;
+});
+
+// ===== スマホ操作 =====
+document.addEventListener("touchstart", (e) => {
+  let x = e.touches[0].clientX;
+  let width = window.innerWidth;
+
+  if (x < width / 2) {
+    // ジャンプ
+    if (!player.jumping) {
+      player.vy = -15;
+      player.jumping = true;
+    } else {
+      floating = true;
+    }
+  } else {
+    // 攻撃
+    shooting = true;
+  }
+
+  if (navigator.vibrate) navigator.vibrate(50);
+});
+
+document.addEventListener("touchend", () => {
+  shooting = false;
+  floating = false;
 });
 
 // ===== コピー能力 =====
@@ -166,20 +192,6 @@ function update() {
     }
   });
 
-  // ===== ボス衝突 =====
-  if (bossActive && boss) {
-    if (
-      !sucking &&
-      player.x < boss.x + boss.width &&
-      player.x + player.width > boss.x &&
-      player.y < boss.y + boss.height &&
-      player.y + player.height > boss.y
-    ) {
-      createParticles(player.x, player.y);
-      gameOver = true;
-    }
-  }
-
   // ===== 吸い込み =====
   obstacles = obstacles.filter(o => {
     let dx = player.x - o.x;
@@ -210,7 +222,6 @@ function update() {
 
   // ===== 弾衝突 =====
   bullets.forEach((b, bi) => {
-
     obstacles.forEach((o, oi) => {
       if (
         b.x < o.x + o.width &&
@@ -231,54 +242,7 @@ function update() {
         score += 50;
       }
     });
-
-    // ボス
-    if (bossActive && boss) {
-      if (
-        b.x < boss.x + boss.width &&
-        b.x > boss.x &&
-        b.y < boss.y + boss.height &&
-        b.y > boss.y
-      ) {
-        boss.hp--;
-        bullets.splice(bi, 1);
-      }
-    }
   });
-
-  // ===== ボス更新 =====
-  if (bossActive && boss) {
-
-    // 追尾AI
-    boss.y += (player.y - boss.y) * 0.02;
-
-    // フェーズ2
-    if (boss.hp < boss.maxHp / 2) {
-      boss.phase = 2;
-    }
-
-    boss.x -= boss.phase === 1 ? 1 : 2;
-
-    // 攻撃
-    if (frame % (boss.phase === 1 ? 60 : 30) === 0) {
-      obstacles.push({
-        x: boss.x,
-        y: boss.y + 50,
-        width: 30,
-        height: 30,
-        type: "fire",
-        speed: 7,
-        hp: 1
-      });
-    }
-
-    if (boss.hp <= 0) {
-      createParticles(boss.x, boss.y);
-      bossActive = false;
-      boss = null;
-      level++;
-    }
-  }
 
   // ===== パーティクル =====
   particles.forEach(p => {
@@ -310,53 +274,24 @@ function draw() {
   ctx.fillStyle = "#87CEEB";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  clouds.forEach(c => ctx.fillRect(c.x, c.y, 40, 20));
-  buildings.forEach(b => ctx.fillRect(b.x, ground - b.h, 50, b.h));
-
   ctx.fillStyle = "green";
   ctx.fillRect(0, ground, canvas.width, 60);
 
-  let bounce = Math.sin(frame * 0.2) * 3;
+  ctx.drawImage(playerImg, player.x, player.y, 60, 60);
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(player.x + 30, player.y + 30 + bounce, 30, 0, Math.PI * 2);
-  ctx.clip();
-  ctx.drawImage(playerImg, player.x, player.y + bounce, 60, 60);
-  ctx.restore();
-
-  // 敵
   obstacles.forEach(o => {
     ctx.fillStyle = o.frozen > 0 ? "lightblue" : "purple";
     ctx.fillRect(o.x, o.y, o.width, o.height);
   });
 
-  // ボス
-  if (bossActive && boss) {
-    ctx.fillStyle = "black";
-    ctx.fillRect(boss.x, boss.y, boss.width, boss.height);
-
-    // HPバー
-    ctx.fillStyle = "red";
-    ctx.fillRect(boss.x, boss.y - 10, (boss.hp / boss.maxHp) * boss.width, 5);
-  }
-
-  // 弾
   bullets.forEach(b => {
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  // パーティクル
-  particles.forEach(p => {
-    ctx.fillRect(p.x, p.y, 4, 4);
-  });
-
-  // UI
   ctx.fillStyle = "black";
   ctx.fillText("Score: " + score, 10, 30);
-  ctx.fillText("Level: " + level, 10, 60);
 
   if (gameOver) {
     ctx.font = "40px sans-serif";
