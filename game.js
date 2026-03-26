@@ -22,81 +22,62 @@ let ground = 340;
 let frame = 0;
 let gameOver = false;
 let score = 0;
-let level = 1;
-let speed = 5;
-let bossActive = false;
 
-// ===== カービィ風 =====
-let floating = false;
-let sucking = false;
+// ===== 操作 =====
 let shooting = false;
-let ability = "normal";
 
 // ===== オブジェクト =====
 let obstacles = [];
 let bullets = [];
-let particles = [];
+let enemyBullets = [];
+
+// ===== ボス =====
 let boss = null;
+let bossActive = false;
 
-// ===== 背景 =====
-let clouds = [];
-let buildings = [];
-
-for (let i = 0; i < 5; i++) {
-  clouds.push({ x: i * 200, y: Math.random() * 100 });
-  buildings.push({ x: i * 300, h: 100 + Math.random() * 100 });
-}
-
-// ===== 入力（PC） =====
+// ===== 入力 =====
 document.addEventListener("keydown", (e) => {
-  if (e.code === "Space") {
-    if (!player.jumping) {
-      player.vy = -15;
-      player.jumping = true;
-    } else {
-      floating = true;
-    }
+  if (e.code === "Space" && !player.jumping) {
+    player.vy = -15;
+    player.jumping = true;
   }
-  if (e.code === "KeyZ") sucking = true;
   if (e.code === "KeyX") shooting = true;
 });
 
 document.addEventListener("keyup", (e) => {
-  if (e.code === "Space") floating = false;
-  if (e.code === "KeyZ") sucking = false;
   if (e.code === "KeyX") shooting = false;
 });
 
 // ===== スマホ操作 =====
-document.addEventListener("touchstart", (e) => {
-  let x = e.touches[0].clientX;
-  let width = window.innerWidth;
+window.addEventListener("DOMContentLoaded", () => {
+  const jumpBtn = document.getElementById("jump-btn");
+  const shootBtn = document.getElementById("shoot-btn");
 
-  if (x < width / 2) {
-    // ジャンプ
-    if (!player.jumping) {
-      player.vy = -15;
-      player.jumping = true;
-    } else {
-      floating = true;
-    }
-  } else {
-    // 攻撃
-    shooting = true;
+  if (jumpBtn) {
+    jumpBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      if (!player.jumping) {
+        player.vy = -15;
+        player.jumping = true;
+      }
+    });
+    jumpBtn.addEventListener("click", () => {
+      if (!player.jumping) {
+        player.vy = -15;
+        player.jumping = true;
+      }
+    });
   }
 
-  if (navigator.vibrate) navigator.vibrate(50);
+  if (shootBtn) {
+    shootBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      shooting = true;
+    });
+    shootBtn.addEventListener("touchend", () => shooting = false);
+    shootBtn.addEventListener("click", () => shooting = true);
+  }
 });
-
-document.addEventListener("touchend", () => {
-  shooting = false;
-  floating = false;
-});
-
-// ===== コピー能力 =====
-function copyAbility(enemy) {
-  ability = enemy.type;
-}
 
 // ===== 更新 =====
 function update() {
@@ -104,25 +85,6 @@ function update() {
 
   frame++;
   score++;
-
-  if (score % 300 === 0) {
-    level++;
-    speed++;
-  }
-
-  // ===== ボス出現 =====
-  if (level % 5 === 0 && !bossActive) {
-    bossActive = true;
-    boss = {
-      x: canvas.width,
-      y: 200,
-      width: 120,
-      height: 120,
-      hp: 20,
-      maxHp: 20,
-      phase: 1
-    };
-  }
 
   // ===== プレイヤー =====
   player.vy += gravity;
@@ -134,93 +96,100 @@ function update() {
     player.jumping = false;
   }
 
-  if (floating) player.vy -= 0.5;
-
-  // ===== 背景 =====
-  clouds.forEach(c => {
-    c.x -= 1;
-    if (c.x < -50) c.x = canvas.width;
-  });
-
-  buildings.forEach(b => {
-    b.x -= 2;
-    if (b.x < -50) b.x = canvas.width;
-  });
-
-  // ===== 敵生成 =====
+  // ===== 敵 =====
   if (!bossActive && frame % 60 === 0) {
-    let types = ["normal", "fire", "ice", "flying", "fast", "big"];
-    let type = types[Math.floor(Math.random() * types.length)];
-
-    let enemy = {
+    obstacles.push({
       x: canvas.width,
+      y: ground - 40,
       width: 40,
       height: 40,
-      type,
-      frozen: 0,
-      hp: type === "big" ? 3 : 1,
-      speed: type === "fast" ? speed + 3 : speed
-    };
-
-    enemy.y = (type === "flying") ? 150 + Math.random() * 150 : ground - 40;
-
-    obstacles.push(enemy);
+      speed: 5
+    });
   }
 
-  // ===== 敵更新 =====
-  obstacles.forEach(o => {
-    if (o.frozen > 0) {
-      o.frozen--;
-    } else {
-      o.x -= o.speed;
+  obstacles.forEach(o => o.x -= o.speed);
 
-      if (o.type === "flying") {
-        o.y += (player.y < o.y ? -1 : 1);
+  // ===== ボス出現 =====
+  if (score > 1000 && !bossActive) {
+    bossActive = true;
+    boss = {
+      x: canvas.width,
+      y: 150,
+      width: 120,
+      height: 120,
+      hp: 50,
+      maxHp: 50
+    };
+  }
+
+  // ===== ボス行動（弾幕） =====
+  if (bossActive && boss) {
+    boss.x = 500;
+    boss.y += (player.y - boss.y) * 0.03;
+
+    // 弾幕①：ばらまき
+    if (frame % 30 === 0) {
+      for (let i = 0; i < 6; i++) {
+        enemyBullets.push({
+          x: boss.x,
+          y: boss.y + 60,
+          vx: -3,
+          vy: (i - 3) * 1.2
+        });
       }
     }
 
-    // 衝突
+    // 弾幕②：プレイヤー狙い
+    if (frame % 50 === 0) {
+      let dx = player.x - boss.x;
+      let dy = player.y - boss.y;
+      let len = Math.sqrt(dx * dx + dy * dy);
+
+      enemyBullets.push({
+        x: boss.x,
+        y: boss.y,
+        vx: (dx / len) * 6,
+        vy: (dy / len) * 6
+      });
+    }
+  }
+
+  // ===== 自機弾 =====
+  if (shooting && frame % 10 === 0) {
+    bullets.push({
+      x: player.x + 50,
+      y: player.y + 30
+    });
+  }
+
+  bullets.forEach(b => b.x += 10);
+
+  // ===== 敵弾 =====
+  enemyBullets.forEach(b => {
+    b.x += b.vx;
+    b.y += b.vy;
+  });
+
+  // ===== 衝突 =====
+  obstacles.forEach(o => {
     if (
-      !sucking &&
       player.x < o.x + o.width &&
       player.x + player.width > o.x &&
       player.y < o.y + o.height &&
       player.y + player.height > o.y
-    ) {
-      createParticles(player.x, player.y);
-      gameOver = true;
-    }
+    ) gameOver = true;
   });
 
-  // ===== 吸い込み =====
-  obstacles = obstacles.filter(o => {
-    let dx = player.x - o.x;
-
-    if (sucking && Math.abs(dx) < 150) o.x += dx * 0.1;
-
-    if (sucking && Math.abs(dx) < 20) {
-      copyAbility(o);
-      createParticles(o.x, o.y);
-      return false;
-    }
-
-    return o.x > -50;
+  enemyBullets.forEach(b => {
+    if (
+      player.x < b.x &&
+      player.x + player.width > b.x &&
+      player.y < b.y &&
+      player.y + player.height > b.y
+    ) gameOver = true;
   });
 
-  // ===== 弾 =====
-  if (shooting && frame % 10 === 0) {
-    bullets.push({
-      x: player.x + player.width,
-      y: player.y + player.height * 0.7,
-      r: 5,
-      type: ability,
-      speed: ability === "ice" ? 6 : 10
-    });
-  }
-
-  bullets.forEach(b => b.x += b.speed);
-
-  // ===== 弾衝突 =====
+  // ===== 弾と敵 =====
   bullets.forEach((b, bi) => {
     obstacles.forEach((o, oi) => {
       if (
@@ -229,42 +198,32 @@ function update() {
         b.y < o.y + o.height &&
         b.y > o.y
       ) {
-        if (b.type === "ice") {
-          o.frozen = 30;
-        } else {
-          o.hp--;
-          if (o.hp <= 0) {
-            createParticles(o.x, o.y);
-            obstacles.splice(oi, 1);
-          }
-        }
+        obstacles.splice(oi, 1);
         bullets.splice(bi, 1);
-        score += 50;
+        score += 100;
       }
     });
+
+    // ボス
+    if (bossActive && boss) {
+      if (
+        b.x < boss.x + boss.width &&
+        b.x > boss.x &&
+        b.y < boss.y + boss.height &&
+        b.y > boss.y
+      ) {
+        boss.hp--;
+        bullets.splice(bi, 1);
+
+        if (boss.hp <= 0) {
+          bossActive = false;
+          boss = null;
+          enemyBullets = [];
+          score += 2000;
+        }
+      }
+    }
   });
-
-  // ===== パーティクル =====
-  particles.forEach(p => {
-    p.x += p.vx;
-    p.y += p.vy;
-    p.life--;
-  });
-
-  particles = particles.filter(p => p.life > 0);
-}
-
-// ===== パーティクル =====
-function createParticles(x, y) {
-  for (let i = 0; i < 15; i++) {
-    particles.push({
-      x,
-      y,
-      vx: Math.random() * 6 - 3,
-      vy: Math.random() * -6,
-      life: 30
-    });
-  }
 }
 
 // ===== 描画 =====
@@ -280,15 +239,28 @@ function draw() {
   ctx.drawImage(playerImg, player.x, player.y, 60, 60);
 
   obstacles.forEach(o => {
-    ctx.fillStyle = o.frozen > 0 ? "lightblue" : "purple";
+    ctx.fillStyle = "purple";
     ctx.fillRect(o.x, o.y, o.width, o.height);
   });
 
   bullets.forEach(b => {
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = "red";
+    ctx.fillRect(b.x, b.y, 10, 5);
   });
+
+  enemyBullets.forEach(b => {
+    ctx.fillStyle = "blue";
+    ctx.fillRect(b.x, b.y, 6, 6);
+  });
+
+  // ボス
+  if (bossActive && boss) {
+    ctx.fillStyle = "black";
+    ctx.fillRect(boss.x, boss.y, boss.width, boss.height);
+
+    ctx.fillStyle = "red";
+    ctx.fillRect(boss.x, boss.y - 10, (boss.hp / boss.maxHp) * boss.width, 5);
+  }
 
   ctx.fillStyle = "black";
   ctx.fillText("Score: " + score, 10, 30);
@@ -298,6 +270,15 @@ function draw() {
     ctx.fillText("GAME OVER", 250, 200);
   }
 }
+
+// ===== リスタート =====
+document.addEventListener("touchstart", () => {
+  if (gameOver) location.reload();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (gameOver && e.code === "Space") location.reload();
+});
 
 // ===== ループ =====
 function loop() {

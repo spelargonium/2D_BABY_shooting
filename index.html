@@ -19,6 +19,8 @@
       width: 100%;
       max-width: 800px;
       height: auto;
+      position: relative;
+      z-index: 1;
     }
 
     /* スマホボタン */
@@ -28,13 +30,15 @@
       width: 100%;
       display: flex;
       justify-content: space-around;
+      z-index: 10;
     }
 
     #mobile-controls button {
       width: 45%;
       height: 60px;
       font-size: 18px;
-      opacity: 0.8;
+      opacity: 0.9;
+      touch-action: manipulation;
     }
 
     button:active {
@@ -47,12 +51,11 @@
 
   <canvas id="game" width="800" height="400"></canvas>
 
-  <!-- スマホ操作ボタン -->
   <div id="mobile-controls">
     <button id="jump-btn">⬆ ジャンプ</button>
     <button id="shoot-btn">🔫 攻撃</button>
   </div>
 
-  <script src="game.js"></script>
+  <script src="game.js?v=10"></script>
 </body>
 </html>
