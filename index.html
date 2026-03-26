@@ -1,61 +1,50 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Scroll Kirby-like Game</title>
+<meta charset="UTF-8">
+<title>Baby Game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- スマホ対応 -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+  margin: 0;
+  background: black;
+  text-align: center;
+}
 
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: #000;
-      text-align: center;
-    }
+canvas {
+  display: block;
+  margin: 0 auto;
+  width: 800px;
+  height: 400px;
+}
 
-    canvas {
-      width: 100%;
-      max-width: 800px;
-      height: auto;
-      position: relative;
-      z-index: 1;
-    }
+#mobile-controls {
+  position: fixed;
+  bottom: 10px;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+}
 
-    /* スマホボタン */
-    #mobile-controls {
-      position: fixed;
-      bottom: 10px;
-      width: 100%;
-      display: flex;
-      justify-content: space-around;
-      z-index: 10;
-    }
-
-    #mobile-controls button {
-      width: 45%;
-      height: 60px;
-      font-size: 18px;
-      opacity: 0.9;
-      touch-action: manipulation;
-    }
-
-    button:active {
-      transform: scale(0.95);
-    }
-  </style>
+button {
+  width: 30%;
+  height: 60px;
+  font-size: 16px;
+}
+</style>
+<style>
+canvas {
+  image-rendering: pixelated;
+}
+</style>
 </head>
 
 <body>
 
-  <canvas id="game" width="800" height="400"></canvas>
+<canvas id="game" width="800" height="400"></canvas>
 
-  <div id="mobile-controls">
-    <button id="jump-btn">⬆ ジャンプ</button>
-    <button id="shoot-btn">🔫 攻撃</button>
-  </div>
 
-  <script src="game.js?v=10"></script>
+<script src="game.js"></script>
 </body>
 </html>
